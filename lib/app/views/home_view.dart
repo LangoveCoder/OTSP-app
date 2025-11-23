@@ -8,29 +8,6 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:gal/gal.dart'; // Updated import
 
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'OTSP Attendance',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
-      ),
-      themeMode: ThemeMode.system, // Use system theme mode
-      home: HomeView(),
-    );
-  }
-}
-
 class HomeView extends StatefulWidget {
   const HomeView({Key? key}) : super(key: key);
 
