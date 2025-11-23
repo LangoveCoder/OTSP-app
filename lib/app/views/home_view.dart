@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -9,14 +11,14 @@ import 'dart:ui' as ui;
 import 'package:gal/gal.dart'; // Updated import
 
 class HomeView extends StatefulWidget {
-  const HomeView({Key? key}) : super(key: key);
+  const HomeView({super.key});
 
   @override
   _HomeViewState createState() => _HomeViewState();
 }
 
 class _HomeViewState extends State<HomeView> {
-  List<XFile> _images = []; // To store images
+  final List<XFile> _images = []; // To store images
   TextEditingController _controller =
       TextEditingController(); // Controller for input field
   String? customNumber;
