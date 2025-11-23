@@ -1,35 +1,9 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-import 'package:gal/gal.dart'; // Updated import
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'OTSP Attendance',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
-      ),
-      themeMode: ThemeMode.system, // Use system theme mode
-      home: HomeView(),
-    );
-  }
-}
+import 'package:gal/gal.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({Key? key}) : super(key: key);
@@ -39,203 +13,285 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  List<XFile> _images = []; // To store images
-  TextEditingController _controller =
-      TextEditingController(); // Controller for input field
-  String? customNumber;
+  final TextEditingController _controller = TextEditingController();
+  String? rollNumber;
   bool isButtonEnabled = false;
+  bool isProcessing = false;
 
-  // Function to capture an image
+  // Function to capture and save a single image
   Future<void> captureImage() async {
+    if (rollNumber == null || rollNumber!.isEmpty) {
+      Get.snackbar(
+        'Error',
+        'Please enter a roll number',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade400,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    setState(() {
+      isProcessing = true;
+    });
+
     try {
       final picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: ImageSource.camera);
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+      );
 
       if (image != null) {
+        // Get the directory for storing the image locally
+        final directory = await getApplicationDocumentsDirectory();
+        final filePath = '${directory.path}/$rollNumber.jpg';
+
+        // Copy the image to the destination
+        final File imageFile = File(image.path);
+        await imageFile.copy(filePath);
+
+        // Save the image to the gallery
+        await Gal.putImage(filePath);
+
+        // Update the state to reflect the saved image and refresh the UI
         setState(() {
-          _images.add(image); // Add the captured image to the list
+          _controller.clear();
+          rollNumber = null;
+          isButtonEnabled = false;
+          isProcessing = false;
         });
 
-        // If two images are captured, combine them
-        if (_images.length == 2) {
-          await stackImages(_images[0], _images[1]);
-        }
+        Get.snackbar(
+          'Success',
+          'Image saved successfully!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green.shade400,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
       } else {
-        Get.snackbar('Error', 'No image captured');
+        setState(() {
+          isProcessing = false;
+        });
+        Get.snackbar(
+          'Cancelled',
+          'No image captured',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.shade400,
+          colorText: Colors.white,
+        );
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to capture image: $e');
-      print('Error: $e');
-    }
-  }
-
-  // Function to stack images side-by-side using dart:ui
-  Future<void> stackImages(XFile image1, XFile image2) async {
-    try {
-      if (customNumber == null || customNumber!.isEmpty) {
-        Get.snackbar('Error', 'Please enter a number');
-        return;
-      }
-
-      // Load the images as files
-      File file1 = File(image1.path);
-      File file2 = File(image2.path);
-
-      // Decode the images into ui.Image
-      ui.Image img1 = await _loadImage(file1);
-      ui.Image img2 = await _loadImage(file2);
-
-      // Resize the images (350px width, 500px height for each)
-      img1 = await _resizeImage(img1, 960, 1080);
-      img2 = await _resizeImage(img2, 960, 1080);
-
-      // Create a new image to combine both images (700px width, 500px height)
-      final recorder = ui.PictureRecorder();
-      final canvas =
-          Canvas(recorder, Rect.fromPoints(Offset(0, 0), Offset(1920, 1080)));
-
-      // Draw both images side-by-side
-      canvas.drawImage(img1, Offset(0, 0), Paint());
-      canvas.drawImage(img2, Offset(960, 0), Paint());
-
-      // End recording and convert to image
-      final picture = recorder.endRecording();
-      final imgByteData = await picture.toImage(1920, 1080);
-      final byteData =
-          await imgByteData.toByteData(format: ui.ImageByteFormat.png);
-      final bytes = byteData!.buffer.asUint8List();
-
-      // Get the directory for storing the image locally
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath =
-          '${directory.path}/${customNumber!}.png'; // Use custom number only
-
-      // Save the composite image
-      final compositeFile = File(filePath)..writeAsBytesSync(bytes);
-
-      // Save the image to the gallery
-      await Gal.putImage(filePath); // Updated method call
-
-      // Update the state to reflect the saved image and refresh the UI
       setState(() {
-        _images.clear(); // Clear the images list after processing
-        _controller.clear(); // Clear the TextField
-        customNumber = null; // Clear the custom number
-        isButtonEnabled = false; // Disable the button
+        isProcessing = false;
       });
-
       Get.snackbar(
-          'Success', 'Images stacked and saved to gallery at $filePath');
-      print('Composite image saved at: $filePath');
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to process images: $e');
+        'Error',
+        'Failed to capture image: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade400,
+        colorText: Colors.white,
+      );
       print('Error: $e');
     }
   }
 
-  // Function to load an image from a file
-  Future<ui.Image> _loadImage(File file) async {
-    try {
-      final bytes = await file.readAsBytes();
-      final completer = Completer<ui.Image>();
-      ui.decodeImageFromList(Uint8List.fromList(bytes), (result) {
-        return completer.complete(result);
-      });
-      return completer.future;
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to load image: $e');
-      print('Error: $e');
-      rethrow;
-    }
-  }
-
-  // Function to resize the image
-  Future<ui.Image> _resizeImage(ui.Image image, int width, int height) async {
-    try {
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(
-          recorder,
-          Rect.fromPoints(
-              Offset(0, 0), Offset(width.toDouble(), height.toDouble())));
-      final paint = Paint();
-      canvas.drawImageRect(
-          image,
-          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-          Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-          paint);
-      final picture = recorder.endRecording();
-      final imgByteData = await picture.toImage(width, height);
-      return imgByteData;
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to resize image: $e');
-      print('Error: $e');
-      rethrow;
-    }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('OTSP Attendance'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            // Add logo above the text field
-            SizedBox(
-              height: 50,
-            ),
-            Image.asset(
-              'assets/logo/logo.png',
-              width: 200,
-              height: 200,
-            ),
-            SizedBox(
-              height: 20,
-            ),
-            // TextField to enter custom number
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  labelText: 'Enter roll number',
-                  border: OutlineInputBorder(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF667eea),
+              Color(0xFF764ba2),
+              Color(0xFFf093fb),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 40),
+                    // Logo with shadow
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(100),
+                        child: Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.all(20),
+                          child: Image.asset(
+                            'assets/logo/logo.png',
+                            width: 160,
+                            height: 160,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    // Title
+                    const Text(
+                      'OTSP Attendance',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Capture attendance with ease',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white.withOpacity(0.9),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+                    // Input Card
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          // TextField
+                          TextField(
+                            controller: _controller,
+                            decoration: InputDecoration(
+                              labelText: 'Roll Number',
+                              hintText: 'Enter 5-digit roll number',
+                              prefixIcon: Icon(
+                                Icons.person,
+                                color: Color(0xFF667eea),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Color(0xFF667eea),
+                                  width: 2,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                  width: 2,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Color(0xFF667eea),
+                                  width: 2,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                            ),
+                            keyboardType: TextInputType.number,
+                            maxLength: 5,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                rollNumber = value;
+                                isButtonEnabled = value.length == 5;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          // Capture Button
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: (isButtonEnabled && !isProcessing)
+                                  ? captureImage
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF667eea),
+                                foregroundColor: Colors.white,
+                                disabledBackgroundColor: Colors.grey.shade300,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 4,
+                                shadowColor:
+                                    Color(0xFF667eea).withOpacity(0.5),
+                              ),
+                              child: isProcessing
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: const [
+                                        Icon(Icons.camera_alt, size: 24),
+                                        SizedBox(width: 12),
+                                        Text(
+                                          'Capture Image',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                keyboardType: TextInputType.number, // Allow only numbers
-                maxLength: 5, // Limit input to 5 digits
-                onChanged: (value) {
-                  setState(() {
-                    customNumber = value;
-                    isButtonEnabled = value.length ==
-                        5; // Enable button if 5 digits are entered
-                  });
-                },
               ),
             ),
-            SizedBox(
-              height: 50,
-            ),
-            ElevatedButton.icon(
-              onPressed: isButtonEnabled
-                  ? captureImage
-                  : null, // Disable button if not enabled
-              icon: const Icon(Icons.camera_alt), // Camera icon
-              label: const Text('Capture Image'),
-              style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
-            ),
-            if (_images.length == 2)
-              Text(
-                'Two images captured!',
-                style: TextStyle(fontSize: 10, color: Colors.green),
-              ),
-          ],
+          ),
         ),
       ),
     );
