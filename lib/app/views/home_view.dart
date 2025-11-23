@@ -175,68 +175,321 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('OTSP Attendance'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            // Add logo above the text field
-            SizedBox(
-              height: 50,
-            ),
-            Image.asset(
-              'assets/logo/logo.png',
-              width: 200,
-              height: 200,
-            ),
-            SizedBox(
-              height: 20,
-            ),
-            // TextField to enter custom number
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  labelText: 'Enter roll number',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number, // Allow only numbers
-                maxLength: 5, // Limit input to 5 digits
-                onChanged: (value) {
-                  setState(() {
-                    customNumber = value;
-                    isButtonEnabled = value.length ==
-                        5; // Enable button if 5 digits are entered
-                  });
-                },
-              ),
-            ),
-            SizedBox(
-              height: 50,
-            ),
-            ElevatedButton.icon(
-              onPressed: isButtonEnabled
-                  ? captureImage
-                  : null, // Disable button if not enabled
-              icon: const Icon(Icons.camera_alt), // Camera icon
-              label: const Text('Capture Image'),
-              style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
-            ),
-            if (_images.length == 2)
-              Text(
-                'Two images captured!',
-                style: TextStyle(fontSize: 10, color: Colors.green),
-              ),
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [
+                    Color(0xFF1A1A2E),
+                    Color(0xFF16213E),
+                    Color(0xFF0F3460),
+                  ]
+                : [
+                    Color(0xFF667eea),
+                    Color(0xFF764ba2),
+                    Color(0xFFf093fb),
+                  ],
+          ),
         ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // App Title with modern styling
+                    Text(
+                      'OTSP ATTENDANCE',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 2,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.3),
+                            offset: Offset(0, 4),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Balochistan Academy for College Teachers',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.9),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    SizedBox(height: 40),
+
+                    // Logo with glass morphism container
+                    Container(
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/logo/logo.png',
+                        width: 180,
+                        height: 180,
+                      ),
+                    ),
+                    SizedBox(height: 50),
+
+                    // Modern Card for input
+                    Container(
+                      padding: EdgeInsets.all(30),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(isDark ? 0.1 : 0.95),
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 30,
+                            offset: Offset(0, 15),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          // Roll Number Input with modern styling
+                          TextField(
+                            controller: _controller,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white : Color(0xFF2D3436),
+                              letterSpacing: 3,
+                            ),
+                            textAlign: TextAlign.center,
+                            decoration: InputDecoration(
+                              labelText: 'Roll Number',
+                              labelStyle: TextStyle(
+                                color: isDark
+                                    ? Colors.white.withOpacity(0.7)
+                                    : Color(0xFF636E72),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              hintText: '00000',
+                              hintStyle: TextStyle(
+                                color: isDark
+                                    ? Colors.white.withOpacity(0.3)
+                                    : Colors.grey.withOpacity(0.5),
+                                letterSpacing: 3,
+                              ),
+                              filled: true,
+                              fillColor: isDark
+                                  ? Colors.white.withOpacity(0.05)
+                                  : Color(0xFFF5F6FA),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide.none,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(
+                                  color: isDark
+                                      ? Colors.white.withOpacity(0.1)
+                                      : Colors.transparent,
+                                  width: 1,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(15),
+                                borderSide: BorderSide(
+                                  color: isDark
+                                      ? Colors.blue.withOpacity(0.5)
+                                      : Color(0xFF667eea),
+                                  width: 2,
+                                ),
+                              ),
+                              counterStyle: TextStyle(
+                                color: isDark
+                                    ? Colors.white.withOpacity(0.5)
+                                    : Color(0xFF636E72),
+                              ),
+                            ),
+                            keyboardType: TextInputType.number,
+                            maxLength: 5,
+                            onChanged: (value) {
+                              setState(() {
+                                customNumber = value;
+                                isButtonEnabled = value.length == 5;
+                              });
+                            },
+                          ),
+                          SizedBox(height: 30),
+
+                          // Modern Capture Button with gradient
+                          Container(
+                            width: double.infinity,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(15),
+                              gradient: isButtonEnabled
+                                  ? LinearGradient(
+                                      colors: [
+                                        Color(0xFF667eea),
+                                        Color(0xFF764ba2),
+                                      ],
+                                    )
+                                  : null,
+                              color: isButtonEnabled
+                                  ? null
+                                  : Colors.grey.withOpacity(0.3),
+                              boxShadow: isButtonEnabled
+                                  ? [
+                                      BoxShadow(
+                                        color:
+                                            Color(0xFF667eea).withOpacity(0.5),
+                                        blurRadius: 20,
+                                        offset: Offset(0, 10),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(15),
+                                onTap: isButtonEnabled ? captureImage : null,
+                                child: Center(
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.camera_alt_rounded,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'CAPTURE IMAGE',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Status indicator
+                          if (_images.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 20),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _buildImageIndicator(_images.length >= 1),
+                                  SizedBox(width: 10),
+                                  _buildImageIndicator(_images.length >= 2),
+                                ],
+                              ),
+                            ),
+                          if (_images.length == 2)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.green.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                      size: 18,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Two images captured!',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper widget for image capture indicators
+  Widget _buildImageIndicator(bool captured) {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: captured
+            ? Colors.green.withOpacity(0.2)
+            : Colors.white.withOpacity(0.1),
+        border: Border.all(
+          color: captured ? Colors.green : Colors.white.withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Icon(
+        captured ? Icons.check : Icons.camera_alt_outlined,
+        color: captured ? Colors.green : Colors.white.withOpacity(0.5),
+        size: 24,
       ),
     );
   }
