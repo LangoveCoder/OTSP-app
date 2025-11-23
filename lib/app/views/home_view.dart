@@ -88,7 +88,7 @@ class _HomeViewState extends State<HomeView> {
           '${directory.path}/${customNumber!}.png'; // Use custom number only
 
       // Save the composite image
-      final compositeFile = File(filePath)..writeAsBytesSync(bytes);
+      File(filePath).writeAsBytesSync(bytes);
 
       // Save the image to the gallery
       await Gal.putImage(filePath); // Updated method call
