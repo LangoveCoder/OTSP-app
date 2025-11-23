@@ -6,30 +6,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'package:gal/gal.dart'; // Updated import
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'OTSP Attendance',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        brightness: Brightness.light,
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.blue,
-      ),
-      themeMode: ThemeMode.system, // Use system theme mode
-      home: HomeView(),
-    );
-  }
-}
+import 'package:gal/gal.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({Key? key}) : super(key: key);
@@ -65,7 +42,7 @@ class _HomeViewState extends State<HomeView> {
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to capture image: $e');
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
@@ -126,10 +103,10 @@ class _HomeViewState extends State<HomeView> {
 
       Get.snackbar(
           'Success', 'Images stacked and saved to gallery at $filePath');
-      print('Composite image saved at: $filePath');
+      debugPrint('Composite image saved at: $filePath');
     } catch (e) {
       Get.snackbar('Error', 'Failed to process images: $e');
-      print('Error: $e');
+      debugPrint('Error: $e');
     }
   }
 
@@ -144,7 +121,7 @@ class _HomeViewState extends State<HomeView> {
       return completer.future;
     } catch (e) {
       Get.snackbar('Error', 'Failed to load image: $e');
-      print('Error: $e');
+      debugPrint('Error: $e');
       rethrow;
     }
   }
@@ -168,9 +145,15 @@ class _HomeViewState extends State<HomeView> {
       return imgByteData;
     } catch (e) {
       Get.snackbar('Error', 'Failed to resize image: $e');
-      print('Error: $e');
+      debugPrint('Error: $e');
       rethrow;
     }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -184,7 +167,7 @@ class _HomeViewState extends State<HomeView> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             // Add logo above the text field
-            SizedBox(
+            const SizedBox(
               height: 50,
             ),
             Image.asset(
@@ -192,7 +175,7 @@ class _HomeViewState extends State<HomeView> {
               width: 200,
               height: 200,
             ),
-            SizedBox(
+            const SizedBox(
               height: 20,
             ),
             // TextField to enter custom number
@@ -200,7 +183,7 @@ class _HomeViewState extends State<HomeView> {
               padding: const EdgeInsets.all(8.0),
               child: TextField(
                 controller: _controller,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Enter roll number',
                   border: OutlineInputBorder(),
                 ),
@@ -215,7 +198,7 @@ class _HomeViewState extends State<HomeView> {
                 },
               ),
             ),
-            SizedBox(
+            const SizedBox(
               height: 50,
             ),
             ElevatedButton.icon(
@@ -231,7 +214,7 @@ class _HomeViewState extends State<HomeView> {
               ),
             ),
             if (_images.length == 2)
-              Text(
+              const Text(
                 'Two images captured!',
                 style: TextStyle(fontSize: 10, color: Colors.green),
               ),

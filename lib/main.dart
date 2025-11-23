@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'OTSP Attandance',
+      title: 'OTSP Attendance',
       initialRoute: AppPages.initial,
       getPages: AppPages.routes, // Define routes in a separate file
     );
