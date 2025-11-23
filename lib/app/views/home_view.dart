@@ -1,12 +1,9 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-import 'package:gal/gal.dart'; // Updated import
+import 'package:gal/gal.dart';
 
 void main() {
   runApp(MyApp());
@@ -39,137 +36,76 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  List<XFile> _images = []; // To store images
+  bool _isProcessing = false;
   TextEditingController _controller =
       TextEditingController(); // Controller for input field
   String? customNumber;
   bool isButtonEnabled = false;
 
-  // Function to capture an image
+  // Function to capture and save a single image
   Future<void> captureImage() async {
     try {
+      if (customNumber == null || customNumber!.isEmpty) {
+        Get.snackbar('Error', 'Please enter a roll number');
+        return;
+      }
+
+      setState(() {
+        _isProcessing = true;
+      });
+
       final picker = ImagePicker();
       final XFile? image = await picker.pickImage(source: ImageSource.camera);
 
       if (image != null) {
-        setState(() {
-          _images.add(image); // Add the captured image to the list
-        });
-
-        // If two images are captured, combine them
-        if (_images.length == 2) {
-          await stackImages(_images[0], _images[1]);
-        }
+        await saveImage(image);
       } else {
         Get.snackbar('Error', 'No image captured');
+        setState(() {
+          _isProcessing = false;
+        });
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to capture image: $e');
       print('Error: $e');
+      setState(() {
+        _isProcessing = false;
+      });
     }
   }
 
-  // Function to stack images side-by-side using dart:ui
-  Future<void> stackImages(XFile image1, XFile image2) async {
+  // Function to save a single image
+  Future<void> saveImage(XFile image) async {
     try {
-      if (customNumber == null || customNumber!.isEmpty) {
-        Get.snackbar('Error', 'Please enter a number');
-        return;
-      }
-
-      // Load the images as files
-      File file1 = File(image1.path);
-      File file2 = File(image2.path);
-
-      // Decode the images into ui.Image
-      ui.Image img1 = await _loadImage(file1);
-      ui.Image img2 = await _loadImage(file2);
-
-      // Resize the images (350px width, 500px height for each)
-      img1 = await _resizeImage(img1, 960, 1080);
-      img2 = await _resizeImage(img2, 960, 1080);
-
-      // Create a new image to combine both images (700px width, 500px height)
-      final recorder = ui.PictureRecorder();
-      final canvas =
-          Canvas(recorder, Rect.fromPoints(Offset(0, 0), Offset(1920, 1080)));
-
-      // Draw both images side-by-side
-      canvas.drawImage(img1, Offset(0, 0), Paint());
-      canvas.drawImage(img2, Offset(960, 0), Paint());
-
-      // End recording and convert to image
-      final picture = recorder.endRecording();
-      final imgByteData = await picture.toImage(1920, 1080);
-      final byteData =
-          await imgByteData.toByteData(format: ui.ImageByteFormat.png);
-      final bytes = byteData!.buffer.asUint8List();
+      // Load the image as a file
+      File imageFile = File(image.path);
 
       // Get the directory for storing the image locally
       final directory = await getApplicationDocumentsDirectory();
-      final filePath =
-          '${directory.path}/${customNumber!}.png'; // Use custom number only
+      final filePath = '${directory.path}/${customNumber!}.png';
 
-      // Save the composite image
-      final compositeFile = File(filePath)..writeAsBytesSync(bytes);
+      // Copy the image to the new location
+      await imageFile.copy(filePath);
 
       // Save the image to the gallery
-      await Gal.putImage(filePath); // Updated method call
+      await Gal.putImage(filePath);
 
       // Update the state to reflect the saved image and refresh the UI
       setState(() {
-        _images.clear(); // Clear the images list after processing
         _controller.clear(); // Clear the TextField
         customNumber = null; // Clear the custom number
         isButtonEnabled = false; // Disable the button
+        _isProcessing = false;
       });
 
-      Get.snackbar(
-          'Success', 'Images stacked and saved to gallery at $filePath');
-      print('Composite image saved at: $filePath');
+      Get.snackbar('Success', 'Image saved to gallery');
+      print('Image saved at: $filePath');
     } catch (e) {
-      Get.snackbar('Error', 'Failed to process images: $e');
+      Get.snackbar('Error', 'Failed to save image: $e');
       print('Error: $e');
-    }
-  }
-
-  // Function to load an image from a file
-  Future<ui.Image> _loadImage(File file) async {
-    try {
-      final bytes = await file.readAsBytes();
-      final completer = Completer<ui.Image>();
-      ui.decodeImageFromList(Uint8List.fromList(bytes), (result) {
-        return completer.complete(result);
+      setState(() {
+        _isProcessing = false;
       });
-      return completer.future;
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to load image: $e');
-      print('Error: $e');
-      rethrow;
-    }
-  }
-
-  // Function to resize the image
-  Future<ui.Image> _resizeImage(ui.Image image, int width, int height) async {
-    try {
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(
-          recorder,
-          Rect.fromPoints(
-              Offset(0, 0), Offset(width.toDouble(), height.toDouble())));
-      final paint = Paint();
-      canvas.drawImageRect(
-          image,
-          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-          Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-          paint);
-      final picture = recorder.endRecording();
-      final imgByteData = await picture.toImage(width, height);
-      return imgByteData;
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to resize image: $e');
-      print('Error: $e');
-      rethrow;
     }
   }
 
@@ -348,13 +284,13 @@ class _HomeViewState extends State<HomeView> {
                           ),
                           SizedBox(height: 30),
 
-                          // Modern Capture Button with gradient
+                          // Modern Capture Button with gradient and loading state
                           Container(
                             width: double.infinity,
                             height: 60,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(15),
-                              gradient: isButtonEnabled
+                              gradient: (isButtonEnabled && !_isProcessing)
                                   ? LinearGradient(
                                       colors: [
                                         Color(0xFF667eea),
@@ -362,10 +298,10 @@ class _HomeViewState extends State<HomeView> {
                                       ],
                                     )
                                   : null,
-                              color: isButtonEnabled
+                              color: (isButtonEnabled && !_isProcessing)
                                   ? null
                                   : Colors.grey.withOpacity(0.3),
-                              boxShadow: isButtonEnabled
+                              boxShadow: (isButtonEnabled && !_isProcessing)
                                   ? [
                                       BoxShadow(
                                         color:
@@ -380,83 +316,62 @@ class _HomeViewState extends State<HomeView> {
                               color: Colors.transparent,
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(15),
-                                onTap: isButtonEnabled ? captureImage : null,
+                                onTap: (isButtonEnabled && !_isProcessing)
+                                    ? captureImage
+                                    : null,
                                 child: Center(
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.camera_alt_rounded,
-                                        color: Colors.white,
-                                        size: 28,
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'CAPTURE IMAGE',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1.5,
+                                  child: _isProcessing
+                                      ? Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            SizedBox(
+                                              width: 24,
+                                              height: 24,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                        Color>(Colors.white),
+                                              ),
+                                            ),
+                                            SizedBox(width: 12),
+                                            Text(
+                                              'PROCESSING...',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 1.5,
+                                              ),
+                                            ),
+                                          ],
+                                        )
+                                      : Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.camera_alt_rounded,
+                                              color: Colors.white,
+                                              size: 28,
+                                            ),
+                                            SizedBox(width: 12),
+                                            Text(
+                                              'CAPTURE IMAGE',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 1.5,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                    ],
-                                  ),
                                 ),
                               ),
                             ),
                           ),
-
-                          // Status indicator
-                          if (_images.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 20),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  _buildImageIndicator(_images.length >= 1),
-                                  SizedBox(width: 10),
-                                  _buildImageIndicator(_images.length >= 2),
-                                ],
-                              ),
-                            ),
-                          if (_images.length == 2)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.green.withOpacity(0.5),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      color: Colors.green,
-                                      size: 18,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Two images captured!',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),
@@ -467,29 +382,6 @@ class _HomeViewState extends State<HomeView> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // Helper widget for image capture indicators
-  Widget _buildImageIndicator(bool captured) {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: captured
-            ? Colors.green.withOpacity(0.2)
-            : Colors.white.withOpacity(0.1),
-        border: Border.all(
-          color: captured ? Colors.green : Colors.white.withOpacity(0.3),
-          width: 2,
-        ),
-      ),
-      child: Icon(
-        captured ? Icons.check : Icons.camera_alt_outlined,
-        color: captured ? Colors.green : Colors.white.withOpacity(0.5),
-        size: 24,
       ),
     );
   }
